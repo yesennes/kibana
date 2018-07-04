@@ -14,7 +14,7 @@ import { TransactionDistributionRequest } from '../../../store/reactReduxRequest
 import { TransactionDetailsRequest } from '../../../store/reactReduxRequest/transactionDetails';
 import { KueryBar } from '../../shared/KueryBar';
 
-function TransactionDetails({ urlParams }) {
+function TransactionDetails({ urlParams, location }) {
   return (
     <div>
       <HeaderLarge>{urlParams.transactionName}</HeaderLarge>
@@ -23,7 +23,9 @@ function TransactionDetails({ urlParams }) {
 
       <DetailsChartsRequest
         urlParams={urlParams}
-        render={({ data }) => <Charts charts={data} urlParams={urlParams} />}
+        render={({ data }) => (
+          <Charts charts={data} urlParams={urlParams} location={location} />
+        )}
       />
 
       <TransactionDistributionRequest

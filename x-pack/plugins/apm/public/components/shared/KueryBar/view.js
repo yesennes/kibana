@@ -14,7 +14,7 @@ import {
   legacyEncodeURIComponent
 } from '../../../utils/url';
 import { Typeahead } from './Typeahead';
-import { getAPMIndexPattern } from '../../../services/rest';
+import { getAPMIndexPattern } from '../../../services/rest/savedObjects';
 import { convertKueryToEsQuery, getSuggestions } from '../../../services/kuery';
 import styled from 'styled-components';
 import { getBoolFilter } from './get_bool_filter';

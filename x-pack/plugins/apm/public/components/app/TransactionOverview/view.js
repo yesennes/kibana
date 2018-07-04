@@ -4,16 +4,24 @@
  * you may not use this file except in compliance with the Elastic License.
  */
 
-import React from 'react';
+import { EuiIconTip } from '@elastic/eui';
+import styled from 'styled-components';
+import chrome from 'ui/chrome';
+import React, { Component } from 'react';
 import PropTypes from 'prop-types';
-import { HeaderLarge, HeaderMedium } from '../../shared/UIComponents';
+import { HeaderContainer, HeaderMedium } from '../../shared/UIComponents';
 import TabNavigation from '../../shared/TabNavigation';
 import Charts from '../../shared/charts/TransactionCharts';
+import { getMlJobUrl } from '../../../utils/url';
 import List from './List';
+import { units, px, fontSizes } from '../../../style/variables';
 import { OverviewChartsRequest } from '../../../store/reactReduxRequest/overviewCharts';
 import { TransactionListRequest } from '../../../store/reactReduxRequest/transactionList';
 import { ServiceDetailsRequest } from '../../../store/reactReduxRequest/serviceDetails';
 import { KueryBar } from '../../shared/KueryBar';
+
+import DynamicBaselineButton from './DynamicBaseline/Button';
+import DynamicBaselineFlyout from './DynamicBaseline/Flyout';
 
 function ServiceDetailsAndTransactionList({ urlParams, render }) {
   return (
@@ -36,48 +44,117 @@ function ServiceDetailsAndTransactionList({ urlParams, render }) {
   );
 }
 
-export default function TransactionOverview({
-  changeTransactionSorting,
-  transactionSorting,
-  urlParams
-}) {
-  const { serviceName, transactionType } = urlParams;
+const MLTipContainer = styled.div`
+  display: flex;
+  align-items: center;
+  font-size: ${fontSizes.small};
+`;
 
-  return (
-    <div>
-      <HeaderLarge>{serviceName}</HeaderLarge>
+const MLText = styled.div`
+  margin-left: ${px(units.half)};
+`;
 
-      <KueryBar />
+class TransactionOverview extends Component {
+  state = {
+    isFlyoutOpen: false
+  };
 
-      <TabNavigation />
+  onOpenFlyout = () => this.setState({ isFlyoutOpen: true });
+  onCloseFlyout = () => this.setState({ isFlyoutOpen: false });
 
-      <OverviewChartsRequest
-        urlParams={urlParams}
-        render={({ data }) => <Charts charts={data} urlParams={urlParams} />}
-      />
+  render() {
+    const {
+      changeTransactionSorting,
+      hasDynamicBaseline,
+      license,
+      location,
+      transactionSorting,
+      urlParams
+    } = this.props;
 
-      <HeaderMedium>{transactionTypeLabel(transactionType)}</HeaderMedium>
+    const { serviceName, transactionType } = urlParams;
+    const mlEnabled = chrome.getInjected('mlEnabled');
 
-      <ServiceDetailsAndTransactionList
-        urlParams={urlParams}
-        render={({ serviceDetails, transactionList }) => {
-          return (
-            <List
-              agentName={serviceDetails.agentName}
-              serviceName={serviceName}
-              type={transactionType}
-              items={transactionList}
-              changeTransactionSorting={changeTransactionSorting}
-              transactionSorting={transactionSorting}
+    const ChartHeaderContent =
+      hasDynamicBaseline && license.data.features.ml.isAvailable ? (
+        <MLTipContainer>
+          <EuiIconTip content="The stream around the average response time shows the expected bounds. An annotation is shown for anomaly scores &gt;= 75." />
+          <MLText>
+            Machine Learning:{' '}
+            <a
+              href={getMlJobUrl(
+                serviceName,
+                transactionType,
+                this.props.location
+              )}
+            >
+              View Job
+            </a>
+          </MLText>
+        </MLTipContainer>
+      ) : null;
+
+    return (
+      <div>
+        <HeaderContainer>
+          <h1>{serviceName}</h1>
+          {license.data.features.ml.isAvailable &&
+            mlEnabled && (
+              <DynamicBaselineButton onOpenFlyout={this.onOpenFlyout} />
+            )}
+        </HeaderContainer>
+        <KueryBar />
+        <DynamicBaselineFlyout
+          hasDynamicBaseline={hasDynamicBaseline}
+          isOpen={this.state.isFlyoutOpen}
+          location={location}
+          onClose={this.onCloseFlyout}
+          serviceName={serviceName}
+          transactionType={transactionType}
+        />
+
+        <TabNavigation />
+
+        <OverviewChartsRequest
+          urlParams={urlParams}
+          render={({ data }) => (
+            <Charts
+              charts={data}
+              urlParams={urlParams}
+              location={location}
+              ChartHeaderContent={ChartHeaderContent}
             />
-          );
-        }}
-      />
-    </div>
-  );
+          )}
+        />
+
+        <HeaderMedium>{transactionTypeLabel(transactionType)}</HeaderMedium>
+
+        <ServiceDetailsAndTransactionList
+          urlParams={urlParams}
+          render={({ serviceDetails, transactionList }) => {
+            return (
+              <List
+                agentName={serviceDetails.agentName}
+                serviceName={serviceName}
+                type={transactionType}
+                items={transactionList}
+                changeTransactionSorting={changeTransactionSorting}
+                transactionSorting={transactionSorting}
+              />
+            );
+          }}
+        />
+      </div>
+    );
+  }
 }
 
 TransactionOverview.propTypes = {
+  changeTransactionSorting: PropTypes.func.isRequired,
+  hasDynamicBaseline: PropTypes.bool.isRequired,
+  license: PropTypes.object.isRequired,
+  location: PropTypes.object.isRequired,
+  transactionSorting: PropTypes.object.isRequired,
   urlParams: PropTypes.object.isRequired
 };
 
@@ -92,3 +169,5 @@ function transactionTypeLabel(type) {
       return type;
   }
 }
+
+export default TransactionOverview;
